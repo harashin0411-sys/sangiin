@@ -29,11 +29,12 @@
     border: 2px solid #aaa;
     box-sizing: border-box;
   }
+  /* 候補名＋合計票数の文字を大きく */
   .candidate-header {
     text-align: center;
-    font-size: 1.1em;
+    font-size: 1.6em; /* ← 大きくしました */
     font-weight: bold;
-    padding: 5px;
+    padding: 8px; /* 少し余白も増加 */
     background-color: #eef;
     border-bottom: 1px solid #ccc;
   }
@@ -42,7 +43,7 @@
     display: flex;
     flex-direction: column-reverse;
     align-items: flex-start;
-    height: 500px; /* ← 高さを広げて積み上げ余裕を確保 */
+    height: 500px; /* 高さ広め */
     padding: 5px;
     box-sizing: border-box;
     background-color: #fff;
@@ -135,7 +136,7 @@
       width: 95%;
     }
     .candidate {
-      height: 350px; /* スマホでも少し広めに */
+      height: 350px;
     }
     .bottom-info {
       font-size: 1em;
@@ -277,17 +278,14 @@ function updateMajorityMarkerPosition(candidateId) {
   const candidateEl = document.getElementById(candidateId);
   const marker = candidateEl.querySelector(".majority-marker");
 
-  // 有効高さ（パディング除外）
   const style = window.getComputedStyle(candidateEl);
   const paddingTop = parseFloat(style.paddingTop);
   const paddingBottom = parseFloat(style.paddingBottom);
   const usableHeight = candidateEl.clientHeight - paddingTop - paddingBottom;
 
-  // 全議席数を基準に計算
   const pxPerSeat = usableHeight / TOTAL_SEATS;
   const majorityHeightPx = MAJORITY * pxPerSeat;
 
-  // 上からの距離
   const markerTop = usableHeight - majorityHeightPx + paddingTop;
   marker.style.top = `${markerTop}px`;
 }
