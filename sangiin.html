@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>参議院 首班指名選挙 シミュレーション</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.2em;
+    margin: 10px 0;
+  }
+  .container {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .candidate-area {
+    width: 23%;
+    margin: 5px;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    border: 2px solid #aaa;
+    box-sizing: border-box;
+  }
+  .candidate-header {
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: bold;
+    padding: 5px;
+    background-color: #eef;
+    border-bottom: 1px solid #ccc;
+  }
+  .candidate {
+    position: relative;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    height: 500px; /* ← 高さを広げて積み上げ余裕を確保 */
+    padding: 5px;
+    box-sizing: border-box;
+    background-color: #fff;
+    overflow-y: auto;
+  }
+  .party {
+    margin: 2px 0;
+    cursor: grab;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    color: #fff;
+    font-size: 0.8em;
+    padding: 3px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  }
+  .majority-marker {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    border-top: 2px dashed red;
+    text-align: center;
+    font-size: 0.7em;
+    color: red;
+    background-color: rgba(255,255,255,0.7);
+    pointer-events: none;
+  }
+  .bottom-info {
+    width: 100%;
+    font-size: 0.9em;
+    text-align: left;
+    background: #f9f9f9;
+    padding: 2px 3px;
+    box-sizing: border-box;
+    border-top: 1px solid #ccc;
+    min-height: 24px;
+  }
+  #pool {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 23%;
+    border: 2px solid #aaa;
+    padding: 5px;
+    box-sizing: border-box;
+    background-color: #fff;
+    margin: 5px;
+  }
+  #pool-header {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  .pool-bar {
+    cursor: grab;
+    border-radius: 3px;
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    margin: 3px 0;
+    padding-left: 5px;
+    white-space: nowrap;
+    width: 100%;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    font-size: 0.8em;
+  }
+  .result {
+    text-align: center;
+    font-size: 1em;
+    margin-top: 15px;
+    font-weight: bold;
+  }
+  .name-inputs {
+    text-align: center;
+    margin: 10px;
+  }
+  .name-inputs input {
+    padding: 5px;
+    margin: 5px;
+    font-size: 0.9em;
+    width: 100px;
+  }
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+      align-items: center;
+    }
+    .candidate-area, #pool {
+      width: 95%;
+    }
+    .candidate {
+      height: 350px; /* スマホでも少し広めに */
+    }
+    .bottom-info {
+      font-size: 1em;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>参議院 首班指名選挙 シミュレーション</h1>
+
+<div class="name-inputs">
+  候補A名: <input id="nameA" type="text" value="候補A">
+  候補B名: <input id="nameB" type="text" value="候補B">
+  <button onclick="updateCounts()">名前更新</button>
+  <button onclick="resetSimulation()">リセット</button>
+</div>
+
+<div class="container">
+  <div id="pool">
+    <div id="pool-header">議席プール（残り<span id="remaining-seats">0</span>議席）</div>
+  </div>
+  <div class="candidate-area">
+    <div id="headerA" class="candidate-header">候補A（0）</div>
+    <div id="candidateA" class="candidate">
+      <div class="majority-marker">過半数 125</div>
+    </div>
+    <div id="bottomA" class="bottom-info"></div>
+  </div>
+  <div class="candidate-area">
+    <div id="headerB" class="candidate-header">候補B（0）</div>
+    <div id="candidateB" class="candidate">
+      <div class="majority-marker">過半数 125</div>
+    </div>
+    <div id="bottomB" class="bottom-info"></div>
+  </div>
+  <div class="candidate-area">
+    <div id="headerO" class="candidate-header">その他（0）</div>
+    <div id="others" class="candidate"></div>
+    <div id="bottomO" class="bottom-info"></div>
+  </div>
+</div>
+
+<div id="result" class="result">勝者判定: 未決定</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+const MAJORITY = 125;
+const MAX_HEIGHT = 100;
+const MIN_HEIGHT = 20;
+
+// 無所属
+const yotouIndependent = ["平山","望月"];
+const yatouIndependent = [
+  "広田＜立憲会派＞","泉＜立憲会派＞",
+  "芳賀＜国民会派＞","堂込＜国民会派＞",
+  "伊波","高良","永江","寺田","尾辻"
+];
+
+// 党派データ
+const parties = [
+  { name: "自民", seats: 101, color: "#DC1E1E" },
+  { name: "公明", seats: 21, color: "#FA5ABE" },
+  { name: "立憲", seats: 39, color: "#0078DC" },
+  { name: "維新", seats: 19, color: "#82BE1E" },
+  { name: "国民", seats: 23, color: "#2D37D7" },
+  { name: "参政", seats: 15, color: "#F06932" },
+  { name: "れいわ", seats: 6, color: "#DC0082" },
+  { name: "共産", seats: 7, color: "#9600BE" },
+  { name: "保守", seats: 2, color: "#646EFF" },
+  { name: "社民", seats: 2, color: "#00AAF0" },
+  { name: "ＮＨＫ＜自民会派＞", seats: 1, color: "#FFEE00" },
+  { name: "みらい", seats: 1, color: "#B3EAD2" },
+  ...yotouIndependent.map(name => ({ name, seats: 1, color: "#003246" })),
+  ...yatouIndependent.map(name => ({ name, seats: 1, color: "#555577" }))
+];
+
+const TOTAL_SEATS = parties.reduce((sum, p) => sum + p.seats, 0);
+
+function createPoolBar(party) {
+  const div = document.createElement("div");
+  div.className = "pool-bar";
+  div.textContent = `${party.name} (${party.seats})`;
+  div.dataset.seats = party.seats;
+  div.dataset.name = party.name;
+  div.style.backgroundColor = party.color;
+  return div;
+}
+
+function createPartyElement(party) {
+  const div = document.createElement("div");
+  div.className = "party";
+  div.textContent = `${party.name} (${party.seats})`;
+  div.dataset.seats = party.seats;
+  div.dataset.name = party.name;
+  div.style.backgroundColor = party.color;
+  const maxWidth = 100;
+  const minWidth = 40;
+  const widthPercent = Math.max((party.seats / MAJORITY) * 100, minWidth);
+  div.style.width = `${Math.min(widthPercent, maxWidth)}%`;
+  const heightPx = Math.max((party.seats / MAJORITY) * MAX_HEIGHT, MIN_HEIGHT);
+  div.style.height = `${heightPx}px`;
+  return div;
+}
+
+function initPool() {
+  const pool = document.getElementById("pool");
+  pool.innerHTML = `<div id="pool-header">議席プール（残り<span id="remaining-seats">0</span>議席）</div>`;
+  parties.forEach(p => pool.appendChild(createPoolBar(p)));
+}
+initPool();
+
+['pool','candidateA','candidateB','others'].forEach(id => {
+  new Sortable(document.getElementById(id), {
+    group: 'shared',
+    animation: 150,
+    sort: true,
+    onAdd: function(evt) {
+      if (evt.to.classList.contains('candidate')) {
+        const el = evt.item;
+        const partyObj = { 
+          name: el.dataset.name, 
+          seats: parseInt(el.dataset.seats), 
+          color: el.style.backgroundColor 
+        };
+        const newBar = createPartyElement(partyObj);
+        el.replaceWith(newBar);
+      }
+      updateCounts();
+    },
+    onSort: function() {
+      updateCounts();
+    }
+  });
+});
+
+function updateMajorityMarkerPosition(candidateId) {
+  const candidateEl = document.getElementById(candidateId);
+  const marker = candidateEl.querySelector(".majority-marker");
+
+  // 有効高さ（パディング除外）
+  const style = window.getComputedStyle(candidateEl);
+  const paddingTop = parseFloat(style.paddingTop);
+  const paddingBottom = parseFloat(style.paddingBottom);
+  const usableHeight = candidateEl.clientHeight - paddingTop - paddingBottom;
+
+  // 全議席数を基準に計算
+  const pxPerSeat = usableHeight / TOTAL_SEATS;
+  const majorityHeightPx = MAJORITY * pxPerSeat;
+
+  // 上からの距離
+  const markerTop = usableHeight - majorityHeightPx + paddingTop;
+  marker.style.top = `${markerTop}px`;
+}
+
+function updateCounts() {
+  const nameA = document.getElementById("nameA").value || "候補A";
+  const nameB = document.getElementById("nameB").value || "候補B";
+
+  const partiesA = Array.from(document.getElementById("candidateA").querySelectorAll(".party"));
+  const partiesB = Array.from(document.getElementById("candidateB").querySelectorAll(".party"));
+  const partiesO = Array.from(document.getElementById("others").querySelectorAll(".party"));
+  const poolParties = Array.from(document.getElementById("pool").querySelectorAll(".pool-bar"));
+
+  const seatsA = partiesA.reduce((sum, el) => sum + parseInt(el.dataset.seats), 0);
+  const seatsB = partiesB.reduce((sum, el) => sum + parseInt(el.dataset.seats), 0);
+  const seatsO = partiesO.reduce((sum, el) => sum + parseInt(el.dataset.seats), 0);
+  const remaining = poolParties.reduce((sum, el) => sum + parseInt(el.dataset.seats), 0);
+
+  document.getElementById("headerA").textContent = `${nameA}（${seatsA}）`;
+  document.getElementById("headerB").textContent = `${nameB}（${seatsB}）`;
+  document.getElementById("headerO").textContent = `その他（${seatsO}）`;
+  document.getElementById("remaining-seats").textContent = remaining;
+
+  document.getElementById("bottomA").textContent = partiesA.map(el => `${el.dataset.name} (${el.dataset.seats})`).join("、");
+  document.getElementById("bottomB").textContent = partiesB.map(el => `${el.dataset.name} (${el.dataset.seats})`).join("、");
+  document.getElementById("bottomO").textContent = partiesO.map(el => `${el.dataset.name} (${el.dataset.seats})`).join("、");
+
+  updateMajorityMarkerPosition("candidateA");
+  updateMajorityMarkerPosition("candidateB");
+
+  let resultText = "勝者判定: 未決定";
+  if (seatsA > seatsB && seatsA >= MAJORITY) resultText = `勝者判定: ${nameA} が過半数を獲得！`;
+  else if (seatsB > seatsA && seatsB >= MAJORITY) resultText = `勝者判定: ${nameB} が過半数を獲得！`;
+  else if (seatsA === seatsB && seatsA >= MAJORITY) resultText = `勝者判定: ${nameA} と ${nameB} が同数過半数！`;
+
+  document.getElementById("result").textContent = resultText;
+}
+
+function resetSimulation() {
+  document.getElementById("nameA").value = "候補A";
+  document.getElementById("nameB").value = "候補B";
+  document.getElementById("candidateA").innerHTML = `<div class="majority-marker">過半数 125</div>`;
+  document.getElementById("candidateB").innerHTML = `<div class="majority-marker">過半数 125</div>`;
+  document.getElementById("others").innerHTML = ``;
+  document.getElementById("bottomA").textContent = ``;
+  document.getElementById("bottomB").textContent = ``;
+  document.getElementById("bottomO").textContent = ``;
+  initPool();
+  updateCounts();
+}
+</script>
+
+</body>
+</html>
