@@ -116,6 +116,12 @@
     margin-top: 15px;
     font-weight: bold;
   }
+  .note {
+    text-align: center;
+    font-size: 0.85em;
+    color: #444;
+    margin-top: 5px;
+  }
   .name-inputs {
     text-align: center;
     margin: 10px;
@@ -161,14 +167,14 @@
   <div class="candidate-area">
     <div id="headerA" class="candidate-header">候補A（0）</div>
     <div id="candidateA" class="candidate">
-      <div class="majority-marker">過半数 125</div>
+      <div class="majority-marker">過半数 124</div>
     </div>
     <div id="bottomA" class="bottom-info"></div>
   </div>
   <div class="candidate-area">
     <div id="headerB" class="candidate-header">候補B（0）</div>
     <div id="candidateB" class="candidate">
-      <div class="majority-marker">過半数 125</div>
+      <div class="majority-marker">過半数 124</div>
     </div>
     <div id="bottomB" class="bottom-info"></div>
   </div>
@@ -180,11 +186,12 @@
 </div>
 
 <div id="result" class="result">勝者判定: 未決定</div>
+<div class="note">※参議院議長（関口昌一）は投票権なし</div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <script>
-const MAJORITY = 125;
+const MAJORITY = 124;
 
 // 無所属
 const yotouIndependent = ["平山","望月"];
@@ -194,9 +201,9 @@ const yatouIndependent = [
   "伊波","高良","永江","寺田","尾辻"
 ];
 
-// 党派データ
+// 党派データ（自民党100に修正）
 const parties = [
-  { name: "自民", seats: 101, color: "#DC1E1E" },
+  { name: "自民", seats: 100, color: "#DC1E1E" },
   { name: "公明", seats: 21, color: "#FA5ABE" },
   { name: "立憲", seats: 39, color: "#0078DC" },
   { name: "維新", seats: 19, color: "#82BE1E" },
@@ -211,8 +218,6 @@ const parties = [
   ...yotouIndependent.map(name => ({ name, seats: 1, color: "#003246" })),
   ...yatouIndependent.map(name => ({ name, seats: 1, color: "#555577" }))
 ];
-
-const TOTAL_SEATS = parties.reduce((sum, p) => sum + p.seats, 0);
 
 function createPoolBar(party) {
   const div = document.createElement("div");
@@ -238,7 +243,7 @@ function createPartyElement(party) {
   const paddingBottom = parseFloat(style.paddingBottom);
   const usableHeight = candidateHeight - paddingTop - paddingBottom;
 
-  const pxPerSeat = usableHeight / TOTAL_SEATS;
+  const pxPerSeat = usableHeight / MAJORITY;
   const heightPx = party.seats * pxPerSeat;
   div.style.height = `${heightPx}px`;
 
@@ -247,7 +252,6 @@ function createPartyElement(party) {
   const widthPercent = Math.max((party.seats / MAJORITY) * 100, minWidth);
   div.style.width = `${Math.min(widthPercent, maxWidth)}%`;
 
-  // 可読性調整
   if (heightPx < 20) {
     div.style.fontSize = "0.6em";
     div.style.lineHeight = `${heightPx}px`;
@@ -299,7 +303,7 @@ function updateMajorityMarkerPosition(candidateId) {
   const paddingBottom = parseFloat(style.paddingBottom);
   const usableHeight = candidateEl.clientHeight - paddingTop - paddingBottom;
 
-  const pxPerSeat = usableHeight / TOTAL_SEATS;
+  const pxPerSeat = usableHeight / MAJORITY;
   const majorityHeightPx = MAJORITY * pxPerSeat;
 
   const markerTop = usableHeight - majorityHeightPx + paddingTop;
@@ -343,8 +347,8 @@ function updateCounts() {
 function resetSimulation() {
   document.getElementById("nameA").value = "候補A";
   document.getElementById("nameB").value = "候補B";
-  document.getElementById("candidateA").innerHTML = `<div class="majority-marker">過半数 125</div>`;
-  document.getElementById("candidateB").innerHTML = `<div class="majority-marker">過半数 125</div>`;
+  document.getElementById("candidateA").innerHTML = `<div class="majority-marker">過半数 124</div>`;
+  document.getElementById("candidateB").innerHTML = `<div class="majority-marker">過半数 124</div>`;
   document.getElementById("others").innerHTML = ``;
   document.getElementById("bottomA").textContent = ``;
   document.getElementById("bottomB").textContent = ``;
