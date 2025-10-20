@@ -29,12 +29,11 @@
     border: 2px solid #aaa;
     box-sizing: border-box;
   }
-  /* 候補名＋合計票数の文字を大きく */
   .candidate-header {
     text-align: center;
-    font-size: 1.6em; /* ← 大きくしました */
+    font-size: 1.6em;
     font-weight: bold;
-    padding: 8px; /* 少し余白も増加 */
+    padding: 8px;
     background-color: #eef;
     border-bottom: 1px solid #ccc;
   }
@@ -43,7 +42,7 @@
     display: flex;
     flex-direction: column-reverse;
     align-items: flex-start;
-    height: 500px; /* 高さ広め */
+    height: 500px;
     padding: 5px;
     box-sizing: border-box;
     background-color: #fff;
@@ -56,9 +55,9 @@
     text-align: center;
     font-weight: bold;
     color: #fff;
-    font-size: 0.8em;
-    padding: 3px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    overflow: hidden;
+    white-space: nowrap;
   }
   .majority-marker {
     position: absolute;
@@ -186,8 +185,6 @@
 
 <script>
 const MAJORITY = 125;
-const MAX_HEIGHT = 100;
-const MIN_HEIGHT = 20;
 
 // 無所属
 const yotouIndependent = ["平山","望月"];
@@ -234,12 +231,31 @@ function createPartyElement(party) {
   div.dataset.seats = party.seats;
   div.dataset.name = party.name;
   div.style.backgroundColor = party.color;
+
+  const candidateHeight = document.querySelector(".candidate").clientHeight;
+  const style = window.getComputedStyle(document.querySelector(".candidate"));
+  const paddingTop = parseFloat(style.paddingTop);
+  const paddingBottom = parseFloat(style.paddingBottom);
+  const usableHeight = candidateHeight - paddingTop - paddingBottom;
+
+  const pxPerSeat = usableHeight / TOTAL_SEATS;
+  const heightPx = party.seats * pxPerSeat;
+  div.style.height = `${heightPx}px`;
+
   const maxWidth = 100;
   const minWidth = 40;
   const widthPercent = Math.max((party.seats / MAJORITY) * 100, minWidth);
   div.style.width = `${Math.min(widthPercent, maxWidth)}%`;
-  const heightPx = Math.max((party.seats / MAJORITY) * MAX_HEIGHT, MIN_HEIGHT);
-  div.style.height = `${heightPx}px`;
+
+  // 可読性調整
+  if (heightPx < 20) {
+    div.style.fontSize = "0.6em";
+    div.style.lineHeight = `${heightPx}px`;
+  } else {
+    div.style.fontSize = "0.8em";
+    div.style.lineHeight = `${heightPx}px`;
+  }
+
   return div;
 }
 
